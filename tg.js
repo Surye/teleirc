@@ -197,7 +197,8 @@ module.exports = function(config, sendTo) {
 
             serveFile(photo.file_id, config, tg, function(url) {
                 sendTo.irc(channel.ircChan, '<' + getName(msg.from, config) + '>: ' +
-                    '(Photo, ' + photo.width + 'x' + photo.height + ') ' + url + ' ' + msg.caption);
+                    '(Photo, ' + photo.width + 'x' + photo.height + ') ' +
+                    url + ' ' + (msg.caption || ''));
             });
         } else if (msg.new_chat_photo) {
             // pick the highest quality photo
@@ -215,7 +216,7 @@ module.exports = function(config, sendTo) {
         } else if (msg.video) {
             serveFile(msg.video.file_id, config, tg, function(url) {
                 sendTo.irc(channel.ircChan, '<' + getName(msg.from, config) + '>: ' +
-                    '(Video, ' + msg.video.duration + 's)' + url + ' ' + msg.caption);
+                    '(Video, ' + msg.video.duration + 's)' + url + ' ' + (msg.caption || ''));
             });
         } else if (msg.voice) {
             serveFile(msg.voice.file_id, config, tg, function(url) {
