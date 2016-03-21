@@ -6,7 +6,9 @@ var nodeStatic = require('node-static');
 var mkdirp = require('mkdirp');
 var crypto = require('crypto');
 var nickcolor = require('./nickcolor');
-var myUser;
+
+var myUser = {};
+var seenNames = [];
 
 // tries to read chat ids from a file
 var readChatIds = function(arr) {
@@ -170,6 +172,11 @@ module.exports = function(config, sendTo) {
             msg.voice || msg.contact || msg.location) && !config.showMedia) {
             return;
         }
+
+        // track usernames for creating mentions
+        if (seenNames.indexOf(msg.from.username) == -1) {
+            seenNames.push(msg.from.username);
+        }
         var text;
         if (msg.reply_to_message && msg.text) {
             var replyName;
@@ -198,7 +205,7 @@ module.exports = function(config, sendTo) {
             serveFile(photo.file_id, config, tg, function(url) {
                 sendTo.irc(channel.ircChan, '<' + getName(msg.from, config) + '>: ' +
                     '(Photo, ' + photo.width + 'x' + photo.height + ') ' +
-                    url + ' ' + (msg.caption || ''));
+                    url + (msg.caption ? ' ' + msg.caption : ''));
             });
         } else if (msg.new_chat_photo) {
             // pick the highest quality photo
@@ -216,7 +223,8 @@ module.exports = function(config, sendTo) {
         } else if (msg.video) {
             serveFile(msg.video.file_id, config, tg, function(url) {
                 sendTo.irc(channel.ircChan, '<' + getName(msg.from, config) + '>: ' +
-                    '(Video, ' + msg.video.duration + 's)' + url + ' ' + (msg.caption || ''));
+                    '(Video, ' + msg.video.duration + 's)' +
+                    url + (msg.caption ? ' ' + msg.caption : ''));
             });
         } else if (msg.voice) {
             serveFile(msg.voice.file_id, config, tg, function(url) {
@@ -245,8 +253,6 @@ module.exports = function(config, sendTo) {
     });
 
     sendTo.tg = function(channel, msg) {
-        console.log('  >> relaying to TG: ' + msg);
-
         if (!channel.tgChatId) {
             var err = 'ERROR: No chat_id set! Add me to a Telegram group ' +
                       'and say hi so I can find your group\'s chat_id!';
@@ -255,6 +261,12 @@ module.exports = function(config, sendTo) {
             return;
         }
 
+        seenNames.forEach(function(name) {
+            var rx = new RegExp('\\b' + name + '\\b', 'i');
+            msg = msg.replace(rx, '@' + name);
+        });
+
+        console.log('  >> relaying to TG: ' + msg);
         tg.sendMessage(channel.tgChatId, msg);
     };
 };
